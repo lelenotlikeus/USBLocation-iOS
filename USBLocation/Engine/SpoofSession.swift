@@ -109,11 +109,13 @@ final class SpoofSession: ObservableObject {
     private var backgroundTask = UIBackgroundTaskIdentifier.invalid
     private var joystickVector: CGVector = .zero
     private let locationKeeper = BackgroundKeepAlive()
+    private let notifyDrop: (String) -> Void
 
     private let favoritesKey = "usblocation.favorites"
     private let recentsKey = "usblocation.recents"
 
-    init() {
+    init(onDrop: @escaping (String) -> Void = SpoofSession.deliverDropNotification) {
+        notifyDrop = onDrop
         favorites = SavedPlace.load(key: favoritesKey)
         recents = SavedPlace.load(key: recentsKey)
     }
@@ -163,7 +165,7 @@ final class SpoofSession: ObservableObject {
                 lastNotice = nil
                 lastError = error.localizedDescription
                 status = .dropped(error.localizedDescription)
-                postDropNotification(error.localizedDescription)
+                notifyDrop(error.localizedDescription)
             }
         }
     }
@@ -349,7 +351,7 @@ final class SpoofSession: ObservableObject {
             lastError = error.localizedDescription
             lastNotice = nil
             status = .dropped(error.localizedDescription)
-            postDropNotification(error.localizedDescription)
+            notifyDrop(error.localizedDescription)
             return false
         }
     }
@@ -418,7 +420,7 @@ final class SpoofSession: ObservableObject {
         backgroundTask = .invalid
     }
 
-    private func postDropNotification(_ message: String) {
+    nonisolated private static func deliverDropNotification(_ message: String) {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
         let content = UNMutableNotificationContent()
         content.title = "USBLocation spoof dropped"

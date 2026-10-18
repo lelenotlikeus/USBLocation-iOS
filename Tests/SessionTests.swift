@@ -12,7 +12,7 @@ import XCTest
 
     func testNoActiveStateBeforeBackendReplyAndNoRequestBacklog() async throws {
         LocationEngine.reset()
-        let session = SpoofSession(), pairing = PairingStore()
+        let session = SpoofSession(onDrop: { _ in }), pairing = PairingStore()
         LocationEngine.hold = true
         session.teleport(to: .init(latitude: 41.9, longitude: 12.5), pairing: pairing)
         try await waitUntil { LocationEngine.pending != nil }
@@ -29,7 +29,7 @@ import XCTest
 
     func testResetPreventsLateSetFromReactivatingSimulation() async throws {
         LocationEngine.reset()
-        let session = SpoofSession(), pairing = PairingStore()
+        let session = SpoofSession(onDrop: { _ in }), pairing = PairingStore()
         LocationEngine.hold = true
         session.teleport(to: .init(latitude: 41.9, longitude: 12.5), pairing: pairing)
         try await waitUntil { LocationEngine.pending != nil }
@@ -45,18 +45,20 @@ import XCTest
     func testFailedInitialRouteDoesNotAdvanceOrClaimActive() async throws {
         LocationEngine.reset()
         LocationEngine.fail = true
-        let session = SpoofSession(), pairing = PairingStore()
+        var notices: [String] = []
+        let session = SpoofSession(onDrop: { notices.append($0) }), pairing = PairingStore()
         session.followRoute([.init(latitude: 41.9, longitude: 12.5), .init(latitude: 41.901, longitude: 12.5)], pairing: pairing)
         try await waitUntil { !session.routeActive }
         XCTAssertEqual(session.routeMeters, 0)
         XCTAssertFalse(session.isSpoofing)
         XCTAssertNil(session.simulated)
         XCTAssertNotNil(session.lastError)
+        XCTAssertEqual(notices, ["Mock DVT failure"])
     }
 
     func testCustomDistanceWaitsForAckAndStopsAtTarget() async throws {
         LocationEngine.reset()
-        let session = SpoofSession(), pairing = PairingStore()
+        let session = SpoofSession(onDrop: { _ in }), pairing = PairingStore()
         session.speedKmh = 300
         session.entireRoute = false
         session.routeDistanceKm = 0.001
@@ -75,7 +77,7 @@ import XCTest
 
     func testInvalidCoordinatesNeverReachBackend() async throws {
         LocationEngine.reset()
-        let session = SpoofSession(), pairing = PairingStore()
+        let session = SpoofSession(onDrop: { _ in }), pairing = PairingStore()
         session.teleport(to: .init(latitude: .nan, longitude: 12), pairing: pairing)
         try await waitUntil { session.lastError != nil }
         XCTAssertTrue(LocationEngine.sets.isEmpty)
@@ -83,7 +85,7 @@ import XCTest
 
     func testRoutePauseDoesNotAdvanceAndResumeKeepsTarget() async throws {
         LocationEngine.reset()
-        let session = SpoofSession(), pairing = PairingStore()
+        let session = SpoofSession(onDrop: { _ in }), pairing = PairingStore()
         session.speedKmh = 300
         session.entireRoute = false
         session.routeDistanceKm = 0.05
@@ -102,7 +104,7 @@ import XCTest
 
     func testJoystickStopsAfterRelease() async throws {
         LocationEngine.reset()
-        let session = SpoofSession(), pairing = PairingStore()
+        let session = SpoofSession(onDrop: { _ in }), pairing = PairingStore()
         session.pin = .init(latitude: 41.9, longitude: 12.5)
         session.startJoystick(pairing: pairing)
         try await waitUntil { session.joystickActive }
@@ -133,7 +135,7 @@ import XCTest
     }
 
     func testSpeedClampsNonFiniteAndLimits() async {
-        let session = SpoofSession()
+        let session = SpoofSession(onDrop: { _ in })
         session.speedKmh = 500
         XCTAssertEqual(session.speedKmh, 300)
         session.speedKmh = -1
