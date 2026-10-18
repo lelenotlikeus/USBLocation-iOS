@@ -218,6 +218,7 @@ struct BottomControlsView: View {
                             .contentShape(Capsule())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(mode.title)
                 }
                 Spacer(minLength: 0)
             }

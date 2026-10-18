@@ -78,7 +78,12 @@ final class SpoofSession: ObservableObject {
     @Published var lastError: String?
     @Published var isBusy = false
     @Published var joystickActive = false
-    @Published var speedKmh = 5.0
+    @Published var speedKmh = 5.0 {
+        didSet {
+            let bounded = speedKmh.isFinite ? min(300, max(0.1, speedKmh)) : 5
+            if speedKmh != bounded { speedKmh = bounded }
+        }
+    }
     @Published var entireRoute = true
     @Published var routeDistanceKm = 1.0
     @Published private(set) var routeActive = false

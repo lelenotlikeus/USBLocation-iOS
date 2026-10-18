@@ -28,7 +28,7 @@ Su iOS 18–26 il pairing iniziale può richiedere un computer. Su iOS 27 è imp
 ## Uso
 
 1. Completa il setup di [SETUP.md](SETUP.md). Ferma la simulazione e chiudi la versione Windows prima del test mobile.
-2. Tocca la mappa oppure cerca un luogo. Premi **Teleport** per inviare la selezione.
+2. Tocca la mappa oppure cerca un luogo. Premi **Teleport** per inviare la selezione. In Settings trovi anche coordinate manuali e l'opzione di teletrasporto immediato al tocco.
 3. Imposta la velocità in **km/h** (0,1–300). Apri **Joy** e trascina il pad. Il rilascio azzera il movimento; cambiare app interrompe il joystick manuale.
 4. Per un percorso apri il controllo del tracciato. Puoi calcolare un percorso MapKit, disegnarlo o importare GPX. Disattiva “Percorri il tracciato una volta” per scegliere i chilometri totali; la marcia inverte direzione alle estremità fino all'obiettivo.
 5. **Pausa/Riprendi** conserva il progresso; **Ferma movimento** conserva la posizione simulata.

@@ -81,6 +81,25 @@ import XCTest
         XCTAssertTrue(LocationEngine.sets.isEmpty)
     }
 
+    func testRoutePauseDoesNotAdvanceAndResumeKeepsTarget() async throws {
+        LocationEngine.reset()
+        let session = SpoofSession(), pairing = PairingStore()
+        session.speedKmh = 300
+        session.entireRoute = false
+        session.routeDistanceKm = 0.05
+        session.followRoute([.init(latitude: 41.9, longitude: 12.5), .init(latitude: 41.901, longitude: 12.5)], pairing: pairing)
+        try await waitUntil { session.isSpoofing }
+        session.routePaused = true
+        let distance = session.routeMeters
+        try await Task.sleep(nanoseconds: 350_000_000)
+        XCTAssertEqual(session.routeMeters, distance)
+        session.routePaused = false
+        try await waitUntil { !session.routeActive }
+        XCTAssertEqual(session.routeMeters, 50, accuracy: 1e-7)
+        session.stop(pairing: pairing)
+        try await waitUntil { !session.isBusy }
+    }
+
     func testJoystickStopsAfterRelease() async throws {
         LocationEngine.reset()
         let session = SpoofSession(), pairing = PairingStore()
@@ -98,7 +117,7 @@ import XCTest
         try await waitUntil { !session.isBusy }
     }
 
-    func testGPXAttributeOrderNamespacesAndEscaping() throws {
+    func testGPXAttributeOrderNamespacesAndEscaping() async throws {
         let xml = "<g:gpx xmlns:g='http://www.topografix.com/GPX/1/1'><g:trkpt lon='12.5' lat='41.9'/></g:gpx>"
         let points = try GPXCodec.parse(data: Data(xml.utf8))
         XCTAssertEqual(points.count, 1)
@@ -106,10 +125,20 @@ import XCTest
         XCTAssertTrue(GPXCodec.export(points, name: "A&B <test>").contains("A&amp;B &lt;test&gt;"))
     }
 
-    func testGPXRejectsEntitiesBadCoordinatesAndOversize() {
+    func testGPXRejectsEntitiesBadCoordinatesAndOversize() async {
         let bad = ["<!DOCTYPE gpx [<!ENTITY x 'data'>]><gpx/>", "<gpx><trkpt lat='nan' lon='0'/></gpx>", "<gpx><trkpt lat='91' lon='0'/></gpx>"]
         for xml in bad { XCTAssertThrowsError(try GPXCodec.parse(data: Data(xml.utf8))) }
         XCTAssertThrowsError(try GPXCodec.parse(data: bad[0].data(using: .utf16)!))
         XCTAssertThrowsError(try GPXCodec.parse(data: Data(repeating: 0, count: 5 * 1024 * 1024 + 1)))
+    }
+
+    func testSpeedClampsNonFiniteAndLimits() async {
+        let session = SpoofSession()
+        session.speedKmh = 500
+        XCTAssertEqual(session.speedKmh, 300)
+        session.speedKmh = -1
+        XCTAssertEqual(session.speedKmh, 0.1)
+        session.speedKmh = .nan
+        XCTAssertEqual(session.speedKmh, 5)
     }
 }

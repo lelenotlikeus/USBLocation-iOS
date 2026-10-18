@@ -13,6 +13,7 @@ struct MapHomeView: View {
     @State private var routeEnd: CLLocationCoordinate2D?
     @State private var routeCoords: [CLLocationCoordinate2D] = []
     @State private var isRouting = false
+    @AppStorage("usblocation.instantTeleport") private var instantTeleport = false
     @State private var showRouteSheet = false
     @State private var showGPXImporter = false
     @State private var drawnPath: [CLLocationCoordinate2D] = []
@@ -159,6 +160,7 @@ struct MapHomeView: View {
             session.pin = coord
             pinPlaceName = nil
             pinSelected = false
+            if instantTeleport { session.teleport(to: coord, pairing: pairing) }
         }
     }
 

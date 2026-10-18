@@ -9,6 +9,9 @@ struct SettingsView: View {
     @State private var showImporter = false
     @State private var showPairOnDevice = false
     @State private var tunnelIP = TunnelConfig.targetIP
+    @State private var manualLatitude = 41.9028
+    @State private var manualLongitude = 12.4964
+    @AppStorage("usblocation.instantTeleport") private var instantTeleport = false
     @State private var localDevVPNInstalled = LocalDevVPN.isInstalled
     @Environment(\.scenePhase) private var scenePhase
 
@@ -96,6 +99,28 @@ struct SettingsView: View {
                     Text("Tunnel")
                 } footer: {
                     Text("Connect LocalDevVPN before teleporting. Default tunnel IP is 10.7.0.1. Start a spoof on Wi‑Fi first; it can keep working on cellular afterward.")
+                }
+
+                Section("Coordinate e teletrasporto") {
+                    HStack {
+                        Text("Latitudine")
+                        TextField("Latitudine", value: $manualLatitude, format: .number.precision(.fractionLength(0...7)))
+                            .keyboardType(.numbersAndPunctuation).multilineTextAlignment(.trailing)
+                            .accessibilityLabel("Latitudine di destinazione")
+                    }
+                    HStack {
+                        Text("Longitudine")
+                        TextField("Longitudine", value: $manualLongitude, format: .number.precision(.fractionLength(0...7)))
+                            .keyboardType(.numbersAndPunctuation).multilineTextAlignment(.trailing)
+                            .accessibilityLabel("Longitudine di destinazione")
+                    }
+                    Button("Teletrasporta alle coordinate") {
+                        session.teleport(to: .init(latitude: manualLatitude, longitude: manualLongitude), pairing: pairing)
+                        dismiss()
+                    }.disabled(session.isBusy || !pairing.hasPairingFile)
+                    Toggle("Teletrasporto immediato al tocco", isOn: $instantTeleport)
+                    Text("Se attivo, un tocco sulla mappa invia subito la posizione all’iPhone. Il disegno dei percorsi aggiunge invece tappe.")
+                        .font(.footnote).foregroundStyle(.secondary)
                 }
 
                 Section("Servizi developer e reset") {
