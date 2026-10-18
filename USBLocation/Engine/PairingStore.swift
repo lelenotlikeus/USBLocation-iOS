@@ -1,0 +1,136 @@
+import Foundation
+import UniformTypeIdentifiers
+import UIKit
+import idevice
+
+@MainActor
+final class PairingStore: ObservableObject {
+    @Published private(set) var hasPairingFile = false
+    @Published var lastError: String?
+
+    static let fileName = "rp_pairing_file.plist"
+    static let supportedTypes: [UTType] = {
+        var types: [UTType] = [
+            .item,          // anything — sideloaded plists often lack a proper UTI
+            .data,
+            .propertyList,
+            .xml,
+        ]
+        for ext in ["plist", "mobiledevicepairing", "mobiledevicepair"] {
+            if let t = UTType(filenameExtension: ext) {
+                types.append(t)
+            }
+        }
+        if let custom = UTType("io.github.lelenotlikeus.usblocation.rppairing") {
+            types.append(custom)
+        }
+        return types
+    }()
+
+    private var directoryURL: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Pairing", isDirectory: true)
+    }
+
+    var pairingURL: URL {
+        directoryURL.appendingPathComponent(Self.fileName)
+    }
+
+    var pairingPath: String { pairingURL.path }
+
+    init() {
+        refresh()
+    }
+
+    func refresh() {
+        try? FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        hasPairingFile = FileManager.default.fileExists(atPath: pairingURL.path)
+    }
+
+    func importPairing(from sourceURL: URL) throws {
+        let accessing = sourceURL.startAccessingSecurityScopedResource()
+        defer { if accessing { sourceURL.stopAccessingSecurityScopedResource() } }
+
+        if let size = try sourceURL.resourceValues(forKeys: [.fileSizeKey]).fileSize, size > 1_048_576 {
+            throw PairingImportError.invalidContents
+        }
+        let data = try Data(contentsOf: sourceURL)
+        try installPairingData(data)
+    }
+
+    /// LiveContainer / broken pickers: copy the plist text (or file) then paste here.
+    func importPairingFromClipboard() throws {
+        let board = UIPasteboard.general
+
+        if let url = board.url ?? board.urls?.first {
+            if url.isFileURL {
+                try importPairing(from: url)
+                return
+            }
+        }
+
+        let candidates: [Data?] = [
+            board.data(forPasteboardType: "com.apple.property-list"),
+            board.data(forPasteboardType: UTType.propertyList.identifier),
+            board.data(forPasteboardType: UTType.xml.identifier),
+            board.data(forPasteboardType: UTType.data.identifier),
+            board.string?.data(using: .utf8),
+        ]
+
+        guard let data = candidates.compactMap({ $0 }).first(where: { !$0.isEmpty }) else {
+            throw PairingImportError.emptyClipboard
+        }
+        try installPairingData(data)
+    }
+
+    func removePairing() throws {
+        if FileManager.default.fileExists(atPath: pairingURL.path) {
+            try FileManager.default.removeItem(at: pairingURL)
+        }
+        hasPairingFile = false
+    }
+
+    private func installPairingData(_ data: Data) throws {
+        guard looksLikePairingPlist(data) else {
+            throw PairingImportError.invalidContents
+        }
+
+        try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        try data.write(to: pairingURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        var protectedURL = pairingURL
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try protectedURL.setResourceValues(values)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: pairingURL.path)
+        hasPairingFile = true
+        lastError = nil
+    }
+
+    private func looksLikePairingPlist(_ data: Data) -> Bool {
+        guard !data.isEmpty, data.count <= 1_048_576 else { return false }
+        let temporary = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".plist")
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        do { try data.write(to: temporary, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]) }
+        catch { return false }
+        var handle: OpaquePointer?
+        let error = temporary.path.withCString { rp_pairing_file_read($0, &handle) }
+        if let error { idevice_error_free(error); return false }
+        guard let handle else { return false }
+        rp_pairing_file_free(handle)
+        return true
+    }
+}
+
+enum PairingImportError: LocalizedError {
+    case emptyClipboard
+    case invalidContents
+
+    var errorDescription: String? {
+        switch self {
+        case .emptyClipboard:
+            return "Clipboard is empty. Copy your RPPairing plist text (or the file), then try Paste again."
+        case .invalidContents:
+            return "That doesn’t look like an RPPairing plist. Copy the full pairing file contents and try again."
+        }
+    }
+}

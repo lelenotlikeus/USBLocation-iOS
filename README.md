@@ -1,72 +1,66 @@
-# Locus
+# USBLocation Mobile · iOS
 
-Free and open-source iPhone location teleport. Tap the map, search a place, or drive a route — Locus injects coordinates through Apple’s **developer location service** into `locationd`, so Maps and other apps see the spoofed GPS (not just a Wi‑Fi lookup that outdoor GPS will overwrite).
+Versione nativa iPhone/iPad, separata da [USBLocation Windows](https://github.com/lelenotlikeus/USBLocation). Derivata da **Locus 1.0.2**, con attribuzione e licenza MIT conservate.
 
-<p align="center">
-  <img src="docs/screenshots/map.png" alt="Locus map with spoof pin" width="180" />
-  <img src="docs/screenshots/spoofing.png" alt="Locus spoofing in 3D" width="180" />
-  <img src="docs/screenshots/joystick.png" alt="Locus joystick controls" width="180" />
-  <img src="docs/screenshots/route.png" alt="Locus route on map" width="180" />
-</p>
+Mappa MapKit, teletrasporto, joystick 360°, velocità personalizzata, percorsi con distanza totale, pausa/ripresa, GPX, preferiti e pairing sul telefono dove supportato. Il backend usa realmente i servizi developer iOS tramite **idevice**: non è una mappa con un indicatore finto.
 
-## Features
+## Installazione
 
-- One-tap teleport (map pin or place search)
-- Live joystick — walk / run / cycle / drive with light speed variation
-- Walk/Drive routing on real roads & footpaths (MapKit)
-- Draw a path or import / export GPX
-- Background keep-alive + live status bar + drop alerts
-- Favorites & recents
-- First-run setup walkthrough
-- Fully on-device — no analytics, nothing uploaded
+Il file `USBLocation-Mobile-1.0.0-unsigned.ipa` è da importare nel sistema di firma/sideload che utilizzi già. **Non è firmato dal progetto e non si installa con il solo download da Safari.** Non sono necessari certificati o password Apple nei sorgenti o nella CI.
 
-## Install
+- [Istruzioni passo passo](SETUP.md)
+- [Build e test](https://github.com/lelenotlikeus/USBLocation-iOS/actions/workflows/build-ios.yml)
+- [Release IPA](https://github.com/lelenotlikeus/USBLocation-iOS/releases)
 
-See [SETUP.md](SETUP.md) for full steps. Grab a prebuilt IPA from [Releases](https://github.com/ChrisMack32/Locus/releases), or build from source below.
+## Requisiti reali
 
-Bundle ID: `com.chrismack.locus`
+| Requisito | Dettaglio |
+| --- | --- |
+| Sistema | iOS/iPadOS 18+; pairing sul dispositivo previsto da iOS 27 |
+| Installazione | Un metodo di firma e installazione IPA; durata/rinnovi dipendono dal metodo usato |
+| Autorizzazione | Modalità sviluppatore, consenso rete locale e pairing confermato dall'utente |
+| Tunnel | LocalDevVPN configurato e connesso; indirizzo predefinito `10.7.0.1` |
+| Servizi developer | Developer Disk Image disponibile. Questa build delega la preparazione DDI a **StikDebug sul telefono**; non implementa un montaggio autonomo delle nuove Cryptex DDI |
+| Rete | Avvio iniziale su Wi-Fi; MapKit usa i servizi Apple per mappe, ricerca e percorsi |
 
-### LiveContainer
+Su iOS 18–26 il pairing iniziale può richiedere un computer. Su iOS 27 è implementato il flusso “Pair on this iPhone”, basato sul consenso in Modalità sviluppatore. L'app non aggira pairing, firma o autorizzazioni.
 
-File pickers often don’t work inside LiveContainer. Use one of these:
+## Uso
 
-1. Long-press **Locus** → **Settings** → enable **Fix File Picker**, then try Import again.
-2. Share the pairing file **into LiveContainer → Locus**.
-3. Copy the RPPairing plist contents → in Locus use **Paste RPPairing from clipboard** (setup or Settings).
+1. Completa il setup di [SETUP.md](SETUP.md). Ferma la simulazione e chiudi la versione Windows prima del test mobile.
+2. Tocca la mappa oppure cerca un luogo. Premi **Teleport** per inviare la selezione.
+3. Imposta la velocità in **km/h** (0,1–300). Apri **Joy** e trascina il pad. Il rilascio azzera il movimento; cambiare app interrompe il joystick manuale.
+4. Per un percorso apri il controllo del tracciato. Puoi calcolare un percorso MapKit, disegnarlo o importare GPX. Disattiva “Percorri il tracciato una volta” per scegliere i chilometri totali; la marcia inverte direzione alle estremità fino all'obiettivo.
+5. **Pausa/Riprendi** conserva il progresso; **Ferma movimento** conserva la posizione simulata.
+6. **Reset**, o “Invia Reset GPS” nelle impostazioni, invia la fine simulazione. Controlla il ritorno alla posizione reale su Mappe.
 
-## How it works
+Le coordinate e i contatori avanzano dopo l'esito del backend. Le richieste sono serializzate fuori dal thread UI; il reset impedisce a una vecchia risposta di riattivare lo stato della sessione. Una richiesta già inviata può comunque completarsi prima del reset.
 
-Locus uses the MIT-licensed [idevice](https://github.com/jkcoxson/idevice) FFI to talk to Apple’s DVT location simulation over an on-device developer tunnel (the same class of mechanism Xcode uses).
+## Limiti e verifica
 
-**iOS 27:** Settings → **Pair on this iPhone** advertises `_remotepairing-pairable-host._tcp`. Confirm the 6-digit code under Settings › Privacy & Security › Developer Mode › Pair with Host — no computer.
+Questa prima build mobile deve essere provata fisicamente sull'iPhone. I test della versione Windows **non** certificano la versione iOS. La CI compila un eseguibile arm64 reale e un'IPA, verifica 90 casi geografici contro GeographicLib ed esegue test del controller/GPX con backend mock nel simulatore; non modifica alcun telefono.
 
-**iOS 18–26:** import an **RPPairing** file once from [idevice_pair](https://github.com/jkcoxson/idevice_pair/releases).
+- Il protocollo di reset non certifica il fix GPS fisico.
+- Background e durata della connessione dipendono da iOS; nessuna promessa di esecuzione illimitata dopo blocco schermo/chiusura forzata.
+- Riprepara i servizi developer se il dispositivo li perde, per esempio dopo un riavvio. La preparazione DDI non è contenuta in questa app.
+- GPX: massimo 5 MB e 2.000 punti; XML con DTD/entità rifiutato. Percorsi quasi antipodali richiedono una tappa intermedia.
+- MapKit non garantisce percorsi ciclabili dedicati: l'opzione Cycle usa il trasporto stradale disponibile.
+- Non sono presenti bypass dei controlli di altre app o promesse di invisibilità.
 
-Also install **[LocalDevVPN](https://apps.apple.com/us/app/localdevvpn/id6755608044)** (loopback tunnel, default `10.7.0.1`), then sideload Locus.
+## Sviluppo
 
-Start a teleport on Wi‑Fi first; the session can keep working on cellular afterward.
+Serve un Mac con Xcode 26+ e XcodeGen. La CI usa Xcode 26.3 su un runner macOS GitHub. Su Windows puoi modificare i sorgenti, ma Xcode non è disponibile.
 
-## Build
-
-Building from source needs an Apple Developer account (free or paid) for code signing. The published IPA does **not** — just sideload it.
-
-1. Install [XcodeGen](https://github.com/yonaskolb/XcodeGen) if needed: `brew install xcodegen`
-2. Set your **Team ID** in `project.yml` (`DEVELOPMENT_TEAM`), *or* pick your team under Xcode → Signing & Capabilities after generating the project.
-3. Generate and open:
-
-```bash
+```sh
+brew install xcodegen
 xcodegen generate
-open Locus.xcodeproj
+xcodebuild -project USBLocation.xcodeproj -scheme USBLocation -configuration Release \
+  -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
+  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
 ```
 
-Or build from the CLI (replace with your Team ID from [developer.apple.com/account](https://developer.apple.com/account) → Membership):
+Per firmare localmente configura il tuo team Apple in Xcode. Non condividere certificati privati, profili di provisioning, record di pairing o password nel repository. I test del controller compilano una variante con backend finto separata dall'app reale; il backend di prova non è incluso nell'IPA.
 
-```bash
-xcodegen generate
-xcodebuild -project Locus.xcodeproj -scheme Locus -configuration Release \
-  -destination 'generic/platform=iOS' DEVELOPMENT_TEAM=YOUR_TEAM_ID build
-```
+## Licenza e provenienza
 
-## License
-
-MIT. `Vendor/idevice` contains the idevice FFI (MIT). Locus is an independent open-source project and is not affiliated with Mirage / Wapixel.
+MIT; copyright upstream conservato in [LICENSE](LICENSE). Crediti, versioni e hash del backend nativo: [THIRD_PARTY.md](THIRD_PARTY.md). Il progetto non è affiliato a Locus, StikDebug o Apple. Nessuna telemetria aggiunta; MapKit e la preparazione developer possono comunicare con servizi Apple. I record di pairing sono credenziali locali e non vanno pubblicati.

@@ -1,0 +1,62 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 35
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Select toolchain and generate project
+        run: |
+          xcodebuild -version
+          brew install xcodegen
+          xcodegen generate
+      - name: Check WGS84 motion against GeographicLib
+        run: |
+          swiftc USBLocation/Engine/GeoMotion.swift Tests/GeoChecks/main.swift -o /tmp/check-motion
+          /tmp/check-motion Tests/GeoChecks/reference.json
+      - name: Compile iPhone app without signing credentials
+        run: |
+          set -o pipefail
+          xcodebuild -project USBLocation.xcodeproj -scheme USBLocation -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' build | tee build-ios.log
+      - name: Run controller and GPX tests with mock device services
+        run: |
+          set -o pipefail
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; data=json.load(sys.stdin)["devices"]; candidates=[(runtime,d) for runtime,devices in data.items() if "iOS-26" in runtime for d in devices if d["isAvailable"] and d["name"].startswith("iPhone")]; print(sorted(candidates,key=lambda row:row[0])[-1][1]["udid"])')
+          xcodebuild -project USBLocation.xcodeproj -scheme MobileTests -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath build-tests CODE_SIGNING_ALLOWED=NO test | tee test-ios.log
+      - name: Package unsigned IPA for the user's sideload signer
+        run: |
+          mkdir -p outputs Payload
+          cp -R build/Build/Products/Release-iphoneos/USBLocation.app Payload/
+          ditto -c -k --keepParent Payload outputs/USBLocation-Mobile-1.0.0-unsigned.ipa
+          cp README.md SETUP.md THIRD_PARTY.md LICENSE outputs/
+          shasum -a 256 outputs/USBLocation-Mobile-1.0.0-unsigned.ipa > outputs/SHA256SUMS.txt
+          python3 -c 'import plistlib,zipfile; z=zipfile.ZipFile("outputs/USBLocation-Mobile-1.0.0-unsigned.ipa"); p=plistlib.loads(z.read("Payload/USBLocation.app/Info.plist")); assert p["CFBundleIdentifier"]=="io.github.lelenotlikeus.usblocation"; assert p["CFBundleDisplayName"]=="USBLocation"; assert "Payload/USBLocation.app/USBLocation" in z.namelist(); assert z.testzip() is None; print("IPA structure and bundle identity verified")'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: USBLocation-Mobile-unsigned
+          path: outputs/
+          retention-days: 30
+          if-no-files-found: error
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: failure()
+        with:
+          name: ios-build-logs
+          path: |
+            build-ios.log
+            test-ios.log
+          retention-days: 7

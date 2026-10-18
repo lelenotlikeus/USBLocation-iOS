@@ -8,3 +8,11 @@ Vendor/idevice-build/
 outputs/
 *.ipa
 Payload/
+*.xcodeproj/
+build-tests/
+*.log
+.research/
+*.mobileprovision
+*.p12
+*.mobiledevicepairing
+rp_pairing_file.plist
