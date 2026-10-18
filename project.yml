@@ -28,6 +28,12 @@ targets:
         buildPhase: none
       - path: Vendor/idevice/idevice.h
         buildPhase: none
+      - path: LICENSE
+        buildPhase: resources
+      - path: THIRD_PARTY.md
+        buildPhase: resources
+      - path: Vendor/idevice/LICENSE.txt
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.lelenotlikeus.usblocation
