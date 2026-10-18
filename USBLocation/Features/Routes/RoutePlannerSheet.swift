@@ -13,6 +13,8 @@ struct RoutePlannerSheet: View {
 
     @EnvironmentObject private var session: SpoofSession
     @Environment(\.dismiss) private var dismiss
+    private enum Field: Hashable { case distance, speed }
+    @FocusState private var focusedField: Field?
 
     var body: some View {
         NavigationStack {
@@ -49,6 +51,7 @@ struct RoutePlannerSheet: View {
                             Text("Chilometri totali")
                             TextField("km", value: $session.routeDistanceKm, format: .number)
                                 .keyboardType(.decimalPad).multilineTextAlignment(.trailing)
+                                .focused($focusedField, equals: .distance)
                                 .accessibilityLabel("Chilometri totali")
                         }
                     }
@@ -56,6 +59,8 @@ struct RoutePlannerSheet: View {
                         Text("Velocità km/h")
                         TextField("km/h", value: $session.speedKmh, format: .number)
                             .keyboardType(.decimalPad).multilineTextAlignment(.trailing)
+                            .focused($focusedField, equals: .speed)
+                            .accessibilityLabel("Velocità in chilometri orari")
                     }
                 }
                 Section("Play / draw / GPX") {
@@ -81,10 +86,19 @@ struct RoutePlannerSheet: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
+            .onSubmit { focusedField = nil }
             .navigationTitle("Routes")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
+                    Button(focusedField == nil ? "Done" : "Fine") {
+                        if focusedField != nil { focusedField = nil }
+                        else { dismiss() }
+                    }
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Fine") { focusedField = nil }
                 }
             }
         }

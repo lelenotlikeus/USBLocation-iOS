@@ -6,7 +6,7 @@ Mappa MapKit, teletrasporto, joystick 360°, velocità personalizzata, percorsi 
 
 ## Installazione
 
-Il file `USBLocation-Mobile-1.0.0-unsigned.ipa` è da importare nel sistema di firma/sideload che utilizzi già. **Non è firmato dal progetto e non si installa con il solo download da Safari.** Non sono necessari certificati o password Apple nei sorgenti o nella CI.
+Il file `USBLocation-Mobile-1.0.1-unsigned.ipa` è da importare nel sistema di firma/sideload che utilizzi già. **Non è firmato dal progetto e non si installa con il solo download da Safari.** Non sono necessari certificati o password Apple nei sorgenti o nella CI.
 
 - [Istruzioni passo passo](SETUP.md)
 - [Build e test](https://github.com/lelenotlikeus/USBLocation-iOS/actions/workflows/build-ios.yml)
@@ -29,7 +29,7 @@ Su iOS 18–26 il pairing iniziale può richiedere un computer. Su iOS 27 è imp
 
 1. Completa il setup di [SETUP.md](SETUP.md). Ferma la simulazione e chiudi la versione Windows prima del test mobile.
 2. Tocca la mappa oppure cerca un luogo. Premi **Teleport** per inviare la selezione. In Settings trovi anche coordinate manuali e l'opzione di teletrasporto immediato al tocco.
-3. Imposta la velocità in **km/h** (0,1–300). Apri **Joy** e trascina il pad. Il rilascio azzera il movimento; cambiare app interrompe il joystick manuale.
+3. Imposta la velocità in **km/h** (0,1–300), poi premi **Fine** accanto al campo per nascondere la tastiera e ritrovare i controlli. Apri **Joy** e trascina il pad. Il rilascio azzera il movimento; cambiare app interrompe il joystick manuale.
 4. Per un percorso apri il controllo del tracciato. Puoi calcolare un percorso MapKit, disegnarlo o importare GPX. Disattiva “Percorri il tracciato una volta” per scegliere i chilometri totali; la marcia inverte direzione alle estremità fino all'obiettivo.
 5. **Pausa/Riprendi** conserva il progresso; **Ferma movimento** conserva la posizione simulata.
 6. **Reset**, o “Invia Reset GPS” nelle impostazioni, invia la fine simulazione. Controlla il ritorno alla posizione reale su Mappe.
@@ -38,10 +38,11 @@ Le coordinate e i contatori avanzano dopo l'esito del backend. Le richieste sono
 
 ## Limiti e verifica
 
-Questa prima build mobile deve essere provata fisicamente sull'iPhone. I test della versione Windows **non** certificano la versione iOS. La CI compila un eseguibile arm64 reale e un'IPA, verifica 90 casi geografici contro GeographicLib ed esegue test del controller/GPX con backend mock nel simulatore; non modifica alcun telefono.
+L'utente ha confermato il funzionamento della precedente build 1.0.0 sul proprio iPhone. La correzione della tastiera in 1.0.1 richiede una nuova prova sul telefono. La CI compila un eseguibile arm64 reale e un'IPA, verifica 90 casi geografici contro GeographicLib ed esegue test del controller/GPX con backend mock nel simulatore; non modifica alcun telefono e non verifica i tocchi sulla tastiera.
 
 - Il protocollo di reset non certifica il fix GPS fisico.
 - Background e durata della connessione dipendono da iOS; nessuna promessa di esecuzione illimitata dopo blocco schermo/chiusura forzata.
+- Il joystick è utilizzabile dentro USBLocation. Le API pubbliche iOS non offrono una finestra interattiva sopra altre app; anche [Picture in Picture non riceve tocchi sui pulsanti personalizzati](https://developer.apple.com/documentation/avkit/adopting-picture-in-picture-for-video-calls). Per osservare il movimento in un'altra app, avvia prima un percorso automatico; resta soggetto ai limiti di background di iOS.
 - Riprepara i servizi developer se il dispositivo li perde, per esempio dopo un riavvio. La preparazione DDI non è contenuta in questa app.
 - GPX: massimo 5 MB e 2.000 punti; XML con DTD/entità rifiutato. Percorsi quasi antipodali richiedono una tappa intermedia.
 - MapKit non garantisce percorsi ciclabili dedicati: l'opzione Cycle usa il trasporto stradale disponibile.

@@ -14,6 +14,8 @@ struct SettingsView: View {
     @AppStorage("usblocation.instantTeleport") private var instantTeleport = false
     @State private var localDevVPNInstalled = LocalDevVPN.isInstalled
     @Environment(\.scenePhase) private var scenePhase
+    private enum Field: Hashable { case tunnel, latitude, longitude }
+    @FocusState private var focusedField: Field?
 
     private var supportsOnDevicePairing: Bool {
         if #available(iOS 27.0, *) { return true }
@@ -71,10 +73,12 @@ struct SettingsView: View {
 
                 Section {
                     TextField("Device tunnel IP", text: $tunnelIP)
+                        .focused($focusedField, equals: .tunnel)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .onSubmit {
                             TunnelConfig.setTargetIP(tunnelIP)
+                            focusedField = nil
                         }
                     LabeledContent("Status") {
                         Text(LocalDevVPN.isConnected ? "Connected" : "Not connected")
@@ -106,12 +110,14 @@ struct SettingsView: View {
                         Text("Latitudine")
                         TextField("Latitudine", value: $manualLatitude, format: .number.precision(.fractionLength(0...7)))
                             .keyboardType(.numbersAndPunctuation).multilineTextAlignment(.trailing)
+                            .focused($focusedField, equals: .latitude)
                             .accessibilityLabel("Latitudine di destinazione")
                     }
                     HStack {
                         Text("Longitudine")
                         TextField("Longitudine", value: $manualLongitude, format: .number.precision(.fractionLength(0...7)))
                             .keyboardType(.numbersAndPunctuation).multilineTextAlignment(.trailing)
+                            .focused($focusedField, equals: .longitude)
                             .accessibilityLabel("Longitudine di destinazione")
                     }
                     Button("Teletrasporta alle coordinate") {
@@ -148,13 +154,19 @@ struct SettingsView: View {
                 }
 
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Settings")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") {
+                    Button(focusedField == nil ? "Done" : "Fine") {
                         TunnelConfig.setTargetIP(tunnelIP)
-                        dismiss()
+                        if focusedField != nil { focusedField = nil }
+                        else { dismiss() }
                     }
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Fine") { focusedField = nil }
                 }
             }
             .sheet(isPresented: $showImporter) {

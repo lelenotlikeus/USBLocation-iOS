@@ -39,10 +39,10 @@ jobs:
         run: |
           mkdir -p outputs Payload
           cp -R build/Build/Products/Release-iphoneos/USBLocation.app Payload/
-          ditto -c -k --keepParent Payload outputs/USBLocation-Mobile-1.0.0-unsigned.ipa
+          ditto -c -k --keepParent Payload outputs/USBLocation-Mobile-1.0.1-unsigned.ipa
           cp README.md SETUP.md THIRD_PARTY.md LICENSE outputs/
-          shasum -a 256 outputs/USBLocation-Mobile-1.0.0-unsigned.ipa > outputs/SHA256SUMS.txt
-          python3 -c 'import plistlib,zipfile; z=zipfile.ZipFile("outputs/USBLocation-Mobile-1.0.0-unsigned.ipa"); p=plistlib.loads(z.read("Payload/USBLocation.app/Info.plist")); assert p["CFBundleIdentifier"]=="io.github.lelenotlikeus.usblocation"; assert p["CFBundleDisplayName"]=="USBLocation"; assert "Payload/USBLocation.app/USBLocation" in z.namelist(); assert z.testzip() is None; print("IPA structure and bundle identity verified")'
+          shasum -a 256 outputs/USBLocation-Mobile-1.0.1-unsigned.ipa > outputs/SHA256SUMS.txt
+          python3 -c 'import plistlib,zipfile; z=zipfile.ZipFile("outputs/USBLocation-Mobile-1.0.1-unsigned.ipa"); p=plistlib.loads(z.read("Payload/USBLocation.app/Info.plist")); assert p["CFBundleIdentifier"]=="io.github.lelenotlikeus.usblocation"; assert p["CFBundleDisplayName"]=="USBLocation"; assert "Payload/USBLocation.app/USBLocation" in z.namelist(); assert z.testzip() is None; print("IPA structure and bundle identity verified")'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: USBLocation-Mobile-unsigned

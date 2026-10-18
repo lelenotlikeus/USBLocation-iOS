@@ -2,7 +2,7 @@
 
 ## 1. Installa l'IPA con il tuo metodo di firma
 
-1. Scarica `USBLocation-Mobile-1.0.0-unsigned.ipa` dalla release o dall'artefatto della build.
+1. Scarica `USBLocation-Mobile-1.0.1-unsigned.ipa` dalla release o dall'artefatto della build.
 2. Importalo nel tuo sistema di firma/sideload e installalo come una normale IPA. Un file scaricato ma non firmato non è installabile direttamente.
 3. Se il metodo richiede conferma dell'autore o Modalità sviluppatore, completala nelle impostazioni iOS. Firma, rinnovi e numero di app disponibili dipendono dal tuo metodo; l'app non li aggira.
 4. Apri USBLocation. Bundle ID sorgente: `io.github.lelenotlikeus.usblocation`; il tuo firmatario può modificarlo.
@@ -49,6 +49,13 @@ La disponibilità può essere persa dopo un riavvio del telefono. Se i servizi s
 4. Attendi l'esito. Uno stato di connessione o la presenza del PIN non sono una conferma GPS.
 5. Apri Mappe sul telefono e verifica lo spostamento. Torna in USBLocation per provare Joy, velocità e percorsi.
 6. Concludi con **Reset** e verifica il ritorno al fix reale. Se non torna, riprova con il tunnel attivo e, se necessario, riavvia l'iPhone.
+
+## Tastiera e uso con un'altra app
+
+- Dopo aver scritto la velocità sotto la mappa, tocca **Fine** accanto al campo: la tastiera si chiude e riappaiono joystick e comandi.
+- In Routes e Settings usa **Fine** sopra la tastiera o nella barra in alto. Il primo tocco chiude la tastiera mantenendo aperta la schermata; puoi anche trascinare la lista per nasconderla.
+- Per vedere uno spostamento in Mappe o in un'altra app, imposta un percorso e la velocità, avvia **Follow route**, poi passa all'altra app. Torna in USBLocation per **Pausa**, **Ferma movimento** o **Reset**. iOS può sospendere l'esecuzione in background.
+- Il joystick manuale si ferma quando lasci USBLocation. Non è disponibile un joystick interattivo in sovraimpressione sulle altre app usando le API pubbliche iOS: il Picture in Picture non consente pulsanti personalizzati toccabili. Installare l'IPA fuori dall'App Store non aggiunge questo permesso.
 
 ## Se il processo viene interrotto
 

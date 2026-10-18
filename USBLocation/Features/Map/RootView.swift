@@ -164,6 +164,7 @@ struct BottomControlsView: View {
     @EnvironmentObject private var pairing: PairingStore
     @Binding var showSettings: Bool
     @Binding var showPlaces: Bool
+    @FocusState private var speedFocused: Bool
 
     private let trayShape = RoundedRectangle(cornerRadius: 28, style: .continuous)
 
@@ -174,115 +175,126 @@ struct BottomControlsView: View {
                 Spacer()
                 TextField("km/h", value: $session.speedKmh, format: .number.precision(.fractionLength(0...1)))
                     .keyboardType(.decimalPad)
+                    .focused($speedFocused)
+                    .onSubmit { speedFocused = false }
                     .multilineTextAlignment(.trailing)
                     .frame(width: 82, height: 44)
                     .accessibilityLabel("Velocità in chilometri orari")
                 Text("km/h").foregroundStyle(.secondary)
+                if speedFocused {
+                    Button("Fine") { speedFocused = false }
+                        .fontWeight(.semibold)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .accessibilityLabel("Fine, nascondi tastiera")
+                }
             }
             .font(.subheadline)
-            if session.routeActive {
-                HStack {
-                    Text(String(format: "%.3f / %.3f km", session.routeMeters / 1000, session.routeTargetMeters / 1000))
-                        .font(.caption.monospacedDigit())
-                    Spacer()
-                    Button(session.routePaused ? "Riprendi" : "Pausa") { session.routePaused.toggle() }
-                        .frame(minWidth: 64, minHeight: 44)
-                }
-            }
-            if session.routeActive || session.joystickActive {
-                Button("Ferma movimento") { session.stopMovement() }
-                    .frame(maxWidth: .infinity, minHeight: 44)
-            }
-            if session.joystickActive {
-                JoystickPad { vector in
-                    session.updateJoystick(vector: vector)
-                }
-                .frame(width: 148, height: 148)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-            }
-
-            HStack(spacing: 8) {
-                ForEach(TravelMode.allCases) { mode in
-                    let selected = session.travelMode == mode
-                    Button {
-                        session.travelMode = mode
-                        session.speedKmh = mode.baseSpeed * 3.6
-                    } label: {
-                        Image(systemName: mode.icon)
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(selected ? .black : .primary)
-                            .frame(width: 44, height: 44)
-                            .background(
-                                Capsule().fill(selected ? USBLocationTheme.accent : Color.primary.opacity(0.08))
-                            )
-                            .contentShape(Capsule())
+            // Keep the speed field and Done visible above the decimal keyboard.
+            if !speedFocused {
+                if session.routeActive {
+                    HStack {
+                        Text(String(format: "%.3f / %.3f km", session.routeMeters / 1000, session.routeTargetMeters / 1000))
+                            .font(.caption.monospacedDigit())
+                        Spacer()
+                        Button(session.routePaused ? "Riprendi" : "Pausa") { session.routePaused.toggle() }
+                            .frame(minWidth: 64, minHeight: 44)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(mode.title)
                 }
-                Spacer(minLength: 0)
-            }
-
-            HStack(spacing: 10) {
-                trayIcon("gearshape.fill") { showSettings = true }.accessibilityLabel("Impostazioni")
-                trayIcon("star.fill") { showPlaces = true }.accessibilityLabel("Luoghi salvati")
-
-                Button {
-                    if session.joystickActive {
-                        session.stopJoystick()
-                    } else {
-                        session.startJoystick(pairing: pairing)
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "dot.circle.and.hand.point.up.left.fill")
-                        Text(session.joystickActive ? "On" : "Joy")
-                            .lineLimit(1)
-                    }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(session.joystickActive ? .black : .primary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(
-                        Capsule().fill(session.joystickActive ? USBLocationTheme.accentSecondary : Color.primary.opacity(0.08))
-                    )
-                    .contentShape(Capsule())
+                if session.routeActive || session.joystickActive {
+                    Button("Ferma movimento") { session.stopMovement() }
+                        .frame(maxWidth: .infinity, minHeight: 44)
                 }
-                .buttonStyle(.plain)
-
-                if session.simulated != nil || session.status != .idle {
-                    Button {
-                        session.stop(pairing: pairing)
-                    } label: {
-                        Text("Reset")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(.white)
-                            .frame(minWidth: 72)
-                            .padding(.vertical, 12)
-                            .padding(.horizontal, 8)
-                            .background(Capsule().fill(USBLocationTheme.danger))
-                            .contentShape(Capsule())
+                if session.joystickActive {
+                    JoystickPad { vector in
+                        session.updateJoystick(vector: vector)
                     }
-                    .buttonStyle(.plain)
-                } else {
-                    Button {
-                        guard let pin = session.pin else {
-                            session.lastError = "Tap the map to drop a pin first."
-                            return
+                    .frame(width: 148, height: 148)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+
+                HStack(spacing: 8) {
+                    ForEach(TravelMode.allCases) { mode in
+                        let selected = session.travelMode == mode
+                        Button {
+                            session.travelMode = mode
+                            session.speedKmh = mode.baseSpeed * 3.6
+                        } label: {
+                            Image(systemName: mode.icon)
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(selected ? .black : .primary)
+                                .frame(width: 44, height: 44)
+                                .background(
+                                    Capsule().fill(selected ? USBLocationTheme.accent : Color.primary.opacity(0.08))
+                                )
+                                .contentShape(Capsule())
                         }
-                        session.teleport(to: pin, pairing: pairing)
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(mode.title)
+                    }
+                    Spacer(minLength: 0)
+                }
+
+                HStack(spacing: 10) {
+                    trayIcon("gearshape.fill") { showSettings = true }.accessibilityLabel("Impostazioni")
+                    trayIcon("star.fill") { showPlaces = true }.accessibilityLabel("Luoghi salvati")
+
+                    Button {
+                        if session.joystickActive {
+                            session.stopJoystick()
+                        } else {
+                            session.startJoystick(pairing: pairing)
+                        }
                     } label: {
-                        Text("Teleport")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(.black)
-                            .frame(minWidth: 96)
-                            .padding(.vertical, 12)
-                            .padding(.horizontal, 10)
-                            .background(Capsule().fill(USBLocationTheme.accent))
-                            .contentShape(Capsule())
+                        HStack(spacing: 6) {
+                            Image(systemName: "dot.circle.and.hand.point.up.left.fill")
+                            Text(session.joystickActive ? "On" : "Joy")
+                                .lineLimit(1)
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(session.joystickActive ? .black : .primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            Capsule().fill(session.joystickActive ? USBLocationTheme.accentSecondary : Color.primary.opacity(0.08))
+                        )
+                        .contentShape(Capsule())
                     }
                     .buttonStyle(.plain)
-                    .disabled(session.isBusy)
+
+                    if session.simulated != nil || session.status != .idle {
+                        Button {
+                            session.stop(pairing: pairing)
+                        } label: {
+                            Text("Reset")
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(.white)
+                                .frame(minWidth: 72)
+                                .padding(.vertical, 12)
+                                .padding(.horizontal, 8)
+                                .background(Capsule().fill(USBLocationTheme.danger))
+                                .contentShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        Button {
+                            guard let pin = session.pin else {
+                                session.lastError = "Tap the map to drop a pin first."
+                                return
+                            }
+                            session.teleport(to: pin, pairing: pairing)
+                        } label: {
+                            Text("Teleport")
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(.black)
+                                .frame(minWidth: 96)
+                                .padding(.vertical, 12)
+                                .padding(.horizontal, 10)
+                                .background(Capsule().fill(USBLocationTheme.accent))
+                                .contentShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(session.isBusy)
+                    }
                 }
             }
         }
